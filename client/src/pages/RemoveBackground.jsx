@@ -24,7 +24,7 @@ const RemoveBackground = () => {
         const formData = new FormData()
         formData.append('image', input)
 
-        const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+        const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
         const response = await fetch(`${apiBase}/api/ai/remove-background`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },

@@ -16,9 +16,10 @@ import { useAuth } from "@clerk/react";
 const App = () => {
 
   const {getToken}=useAuth()
-  useEffect(()=>{
-    getToken().then((token)=>console.log(token));
-  },[]);
+  // Avoid logging tokens in production. Clerk handles auth internally.
+  useEffect(() => {
+    getToken();
+  }, [])
  
 
   return (
