@@ -1,4 +1,3 @@
-import OpenAI from "openai";
 import sql from "../configs/db.js";
 import { clerkClient } from "@clerk/express";
 import { v2 as cloudinary } from "cloudinary";
@@ -26,22 +25,52 @@ const getProviderErrorMessage = (error) => {
 
 const getAIClient = () => {
   const apiKey = process.env.GROQ_API_KEY;
-
   if (!apiKey) {
-    throw new Error(
-      "Missing GROQ_API_KEY. Set GROQ_API_KEY in backend/.env."
-    );
+    throw new Error("Missing GROQ_API_KEY. Set GROQ_API_KEY in backend/.env.");
   }
 
-  return new OpenAI({
-    apiKey,
-    baseURL: "https://api.groq.com/openai/v1",
-  });
+  // Groq supports OpenAI-compatible chat completions.
+  return async ({ model, messages, temperature, max_tokens }) => {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature,
+        max_tokens,
+      }),
+    });
+
+    const text = await response.text();
+    let data = {};
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        // If Groq ever returns non-JSON error text, keep it readable.
+        data = { message: text };
+      }
+    }
+
+    if (!response.ok) {
+      const err = new Error(
+        data?.error?.message || data?.message || text || "Request failed"
+      );
+      err.status = response.status;
+      throw err;
+    }
+
+    return data;
+  };
 };
 
 export const generateArticle = async (req, res) => {
   try {
-    const { userId } = req.auth();
+    const { userId } = await req.auth();
     const { prompt } = req.body;
     const plan = req.plan;
     const free_usage = req.free_usage;
@@ -53,19 +82,16 @@ export const generateArticle = async (req, res) => {
       });
     }
 
-    const response = await getAIClient().chat.completions.create({
+    const callGroqChatCompletion = getAIClient();
+    const response = await callGroqChatCompletion({
       model: LLM_MODEL,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+      messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
       max_tokens: 1000,
     });
 
-    const content = response.choices[0].message.content;
+    const content = response?.choices?.[0]?.message?.content;
+    if (!content) throw new Error("No content returned from Groq.");
 
     await sql`
       INSERT INTO creations (user_id, prompt, content, type)
@@ -96,7 +122,7 @@ export const generateArticle = async (req, res) => {
 
 export const generateBlogTitle = async (req, res) => {
   try {
-    const { userId } = req.auth();
+    const { userId } = await req.auth();
     const { prompt } = req.body;
     const plan = req.plan;
     const free_usage = req.free_usage;
@@ -108,23 +134,19 @@ export const generateBlogTitle = async (req, res) => {
       });
     }
 
-    const response = await getAIClient().chat.completions.create({
+    const callGroqChatCompletion = getAIClient();
+    const response = await callGroqChatCompletion({
       model: LLM_MODEL,
       messages: [
-        {
-          role: "system",
-          content: "Generate one concise blog title.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
+        { role: "system", content: "Generate one concise blog title." },
+        { role: "user", content: prompt },
       ],
       temperature: 0.8,
       max_tokens: 100,
     });
 
-    const content = response.choices[0].message.content;
+    const content = response?.choices?.[0]?.message?.content;
+    if (!content) throw new Error("No content returned from Groq.");
 
     await sql`
       INSERT INTO creations (user_id, prompt, content, type)
@@ -155,7 +177,7 @@ export const generateBlogTitle = async (req, res) => {
 
 export const generateImage = async (req, res) => {
   try {
-    const { userId } = req.auth();
+    const { userId } = await req.auth();
     const { prompt, publish } = req.body;
     const plan = req.plan;
 
@@ -201,7 +223,7 @@ export const generateImage = async (req, res) => {
 
 export const removeImageBackground = async (req, res) => {
   try {
-    const { userId } = req.auth();
+    const { userId } = await req.auth();
     const image = req.file;
     const plan = req.plan;
 
@@ -237,7 +259,7 @@ export const removeImageBackground = async (req, res) => {
 
 export const removeObjectFromImage = async (req, res) => {
   try {
-    const { userId } = req.auth();
+    const { userId } = await req.auth();
     const image = req.file;
     const { object } = req.body;
     const plan = req.plan;
@@ -289,7 +311,7 @@ export const removeObjectFromImage = async (req, res) => {
 
 export const reviewResume = async (req, res) => {
   try {
-    const { userId } = req.auth();
+    const { userId } = await req.auth();
     const resumeFile = req.file;
     const plan = req.plan;
     const free_usage = req.free_usage;
@@ -319,7 +341,8 @@ export const reviewResume = async (req, res) => {
       });
     }
 
-    const response = await getAIClient().chat.completions.create({
+    const callGroqChatCompletion = getAIClient();
+    const response = await callGroqChatCompletion({
       model: LLM_MODEL,
       messages: [
         {
@@ -336,7 +359,8 @@ export const reviewResume = async (req, res) => {
       max_tokens: 1200,
     });
 
-    const content = response.choices[0].message.content;
+    const content = response?.choices?.[0]?.message?.content;
+    if (!content) throw new Error("No content returned from Groq.");
 
     await sql`
       INSERT INTO creations (user_id, prompt, content, type)
@@ -366,7 +390,7 @@ export const reviewResume = async (req, res) => {
 
 export const getUserCreations = async (req, res) => {
   try {
-    const { userId } = req.auth();
+    const { userId } = await req.auth();
 
     const creations = await sql`
       SELECT id, prompt, content, type, created_at, publish
@@ -390,7 +414,7 @@ export const getUserCreations = async (req, res) => {
 
 export const deleteCreation = async (req, res) => {
   try {
-    const { userId } = req.auth();
+    const { userId } = await req.auth();
     const { id } = req.params;
 
     const deleted = await sql`

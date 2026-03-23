@@ -1,17 +1,23 @@
 console.log("STEP 1: Starting server...");
 import express from 'express';
 import cors from 'cors';
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import { clerkMiddleware, requireAuth } from '@clerk/express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 console.log("STEP 2: Imports done");
-import aiRouter from './routes/aiRoutes.js';
-import connectCloudinary from './configs/cloudinary.js';
-console.log("STEP 3: Router loaded");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Ensure we always load `backend/.env` regardless of the current working directory.
+dotenv.config({ path: path.join(__dirname, '.env') });
+
+console.log("STEP 3: Env loaded");
 
 const app = express();
+const { default: aiRouter } = await import('./routes/aiRoutes.js');
+const { default: connectCloudinary } = await import('./configs/cloudinary.js');
 await connectCloudinary()
 
 app.use(cors());
@@ -24,8 +30,6 @@ app.get('/health', (req, res) => res.send('Server is Live'));
 app.use('/api/ai', requireAuth(), aiRouter);
 
 // In production, serve the built React app from `client/dist`.
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const distPath = process.env.FRONTEND_DIST_DIR || path.join(__dirname, '..', 'client', 'dist');
 if (process.env.NODE_ENV === 'production' && fs.existsSync(distPath)) {
   app.use(express.static(distPath));

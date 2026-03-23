@@ -1,6 +1,7 @@
 import { Eraser, Sparkle } from 'lucide-react';
 import React, { useState } from 'react'
 import { useAuth } from '@clerk/react'
+import { fetchJson } from '../utils/fetchJson'
 
 const RemoveBackground = () => {
     const { getToken } = useAuth()
@@ -25,14 +26,15 @@ const RemoveBackground = () => {
         formData.append('image', input)
 
         const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
-        const response = await fetch(`${apiBase}/api/ai/remove-background`, {
+        const { ok, data } = await fetchJson(`${apiBase}/api/ai/remove-background`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: formData
         })
 
-        const data = await response.json()
-        if (!data.success) throw new Error(data.message || 'Failed to remove background.')
+        if (!ok || !data.success) {
+          throw new Error(data.message || 'Failed to remove background.')
+        }
         setResultImage(data.content)
       } catch (err) {
         setError(err.message || 'Something went wrong.')

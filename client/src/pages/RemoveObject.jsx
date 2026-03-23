@@ -1,6 +1,7 @@
 import { Scissors, Sparkle } from 'lucide-react'
 import React, { useState } from 'react'
 import { useAuth } from '@clerk/react'
+import { fetchJson } from '../utils/fetchJson'
 
 const RemoveObject = () => {
 const { getToken } = useAuth()
@@ -36,16 +37,14 @@ const onSubmitHandler = async (e) => {
     formData.append('object', object.trim())
 
     const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
-    const response = await fetch(`${apiBase}/api/ai/remove-object`, {
+    const { ok, data } = await fetchJson(`${apiBase}/api/ai/remove-object`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`
       },
       body: formData
     })
-
-    const data = await response.json()
-    if (!data.success) {
+    if (!ok || !data.success) {
       throw new Error(data.message || 'Failed to remove object.')
     }
 

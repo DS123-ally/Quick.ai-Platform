@@ -1,6 +1,7 @@
 import { Hash, Sparkle } from 'lucide-react'
 import React, { useState } from 'react'
 import { useAuth } from '@clerk/react'
+import { fetchJson } from '../utils/fetchJson'
 
 const BlogTitles = () => {
 
@@ -27,9 +28,12 @@ const BlogTitles = () => {
       try {
         setLoading(true)
         const token = await getToken()
+        if (!token) {
+          throw new Error('Please sign in and try again.')
+        }
         const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
-        const response = await fetch(`${apiBase}/api/ai/generate-blog-title`, {
+        const { ok, status, data } = await fetchJson(`${apiBase}/api/ai/generate-blog-title`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -40,8 +44,9 @@ const BlogTitles = () => {
           })
         })
 
-        const data = await response.json()
-        if (!data.success) throw new Error(data.message || 'Failed to generate title.')
+        if (!ok || !data.success) {
+          throw new Error(data.message || `Request failed (${status}).`)
+        }
         setResult(data.content)
       } catch (err) {
         setError(err.message || 'Something went wrong.')

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { GemIcon, Sparkles } from 'lucide-react'
 import CreationItem from '../components/CreationItem'
 import { useAuth } from '@clerk/react'
+import { fetchJson } from '../utils/fetchJson'
 
 const Dashboard = () => {
 
@@ -12,11 +13,10 @@ const Dashboard = () => {
     try {
       const token = await getToken()
       const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
-      const response = await fetch(`${apiBase}/api/ai/creations`, {
+      const { ok, data } = await fetchJson(`${apiBase}/api/ai/creations`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      const data = await response.json()
-      if (data.success) {
+      if (ok && data.success) {
         setCreations(data.creations || [])
       }
     } catch (error) {
@@ -31,13 +31,11 @@ const Dashboard = () => {
     try {
       const token = await getToken()
       const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
-      const response = await fetch(`${apiBase}/api/ai/creations/${id}`, {
+      const { ok, data } = await fetchJson(`${apiBase}/api/ai/creations/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       })
-
-      const data = await response.json()
-      if (data.success) {
+      if (ok && data.success) {
         setCreations((prev) => prev.filter((item) => item.id !== id))
       }
     } catch (error) {

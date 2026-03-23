@@ -1,6 +1,7 @@
 import { EditIcon, Sparkles } from 'lucide-react'
 import React, { useState } from 'react'
 import { useAuth } from '@clerk/react'
+import { fetchJson } from '../utils/fetchJson'
 
 const WriteArticle = () => {
 
@@ -31,7 +32,7 @@ const WriteArticle = () => {
       const token = await getToken()
       const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
-      const response = await fetch(`${apiBase}/api/ai/generate-article`, {
+      const { ok, data } = await fetchJson(`${apiBase}/api/ai/generate-article`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -42,8 +43,9 @@ const WriteArticle = () => {
         })
       })
 
-      const data = await response.json()
-      if (!data.success) throw new Error(data.message || 'Failed to generate article.')
+      if (!ok || !data.success) {
+        throw new Error(data.message || 'Failed to generate article.')
+      }
       setResult(data.content)
     } catch (err) {
       setError(err.message || 'Something went wrong.')

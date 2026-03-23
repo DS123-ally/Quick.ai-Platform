@@ -1,6 +1,7 @@
 import { Image, Sparkle } from 'lucide-react'
 import React, { useState } from 'react'
 import { useAuth } from '@clerk/react'
+import { fetchJson } from '../utils/fetchJson'
 
 const GenerateImages = () => {
 
@@ -30,7 +31,7 @@ const GenerateImages = () => {
           const token = await getToken()
           const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
-          const response = await fetch(`${apiBase}/api/ai/generate-image`, {
+          const { ok, data } = await fetchJson(`${apiBase}/api/ai/generate-image`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -42,8 +43,9 @@ const GenerateImages = () => {
             })
           })
 
-          const data = await response.json()
-          if (!data.success) throw new Error(data.message || 'Failed to generate image.')
+          if (!ok || !data.success) {
+            throw new Error(data.message || 'Failed to generate image.')
+          }
           setResultImage(data.content)
         } catch (err) {
           setError(err.message || 'Something went wrong.')

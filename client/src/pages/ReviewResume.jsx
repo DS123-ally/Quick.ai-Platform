@@ -1,6 +1,7 @@
 import { FileText, Sparkle } from 'lucide-react';
 import React, { useState } from 'react'
 import { useAuth } from '@clerk/react'
+import { fetchJson } from '../utils/fetchJson'
 
 const ReviewResume = () => {
 
@@ -26,14 +27,15 @@ const ReviewResume = () => {
           formData.append('resume', input)
 
           const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
-          const response = await fetch(`${apiBase}/api/ai/review-resume`, {
+          const { ok, data } = await fetchJson(`${apiBase}/api/ai/review-resume`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
             body: formData
           })
 
-          const data = await response.json()
-          if (!data.success) throw new Error(data.message || 'Failed to review resume.')
+          if (!ok || !data.success) {
+            throw new Error(data.message || 'Failed to review resume.')
+          }
           setResult(data.content)
         } catch (err) {
           setError(err.message || 'Something went wrong.')
