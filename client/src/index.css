@@ -1,0 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=Rethink+Sans:ital,wght@0,400..800;1,400..800&display=swap');
+@import "tailwindcss";
+
+* {
+    font-family: "Rethink Sans", sans-serif;
+}
+.reset-tw, .reset-tw *{
+all: revert !important;
+}
+.cl-drawerRoot{
+z-index: 10;
+}
